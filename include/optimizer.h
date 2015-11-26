@@ -26,7 +26,7 @@ public:
     */
   Optimizer();
 
-  void setParameters(cv::Mat camera_matrix, cv::Mat dist_coef, double baseline);
+  void setParameters(const cv::Mat camera_matrix, const cv::Mat dist_coef, const double baseline);
 
   /** \brief Pose optimization
    * \param keypoints of frame A

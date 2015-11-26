@@ -70,30 +70,11 @@ protected:
   void msgsCallback(const sensor_msgs::ImageConstPtr& l_img_msg,
                     const sensor_msgs::ImageConstPtr& r_img_msg);
 
-  /** \brief Search for matches between current and previous frame
-   * \param Matched left keypoints on the previous frame
-   * \param Matched right keypoints on the previous frame
-   * \param Matched world points on the current frame
+  /** \brief Search for matches between visible map points and current frame points
+   * \param Set of visible map points
+   * \param Current frame
    */
-  void searchMatches(vector<cv::Point2d>& matched_prev_kp_l, vector<cv::Point2d>& matched_prev_kp_r, vector<cv::Point3d>& matched_c_wp);
-
-  /** \brief Estimate the motion between two frames
-   * @return Number of inliers
-   * \param Matched left keypoints on the previous frame
-   * \param Matched right keypoints on the previous frame
-   * \param Matched world points on the current frame
-   * \param Output motion
-   */
-  int estimateMotion(vector<cv::Point2d> matched_prev_kp_l, vector<cv::Point2d> matched_prev_kp_r, vector<cv::Point3d> matched_wp, tf::Transform& delta);
-
-  /** \brief Compute projection error
-   * @return error
-   * \param estimated transform
-   * \param world point
-   * \param corresponding camera point
-   * \param baseline (0 for left camera)
-   */
-  double computeProjectionError(const tf::Transform delta, const cv::Point3d wp, const cv::Point2d cp, double baseline = 0.0);
+  void searchMatches(vector<MapPoint*> mps, Frame frame);
 
   /** \brief Publish the stereo matches for the current frame
    * \param current frame
@@ -116,15 +97,14 @@ private:
   cv::Mat camera_matrix_; //!> Camera matrix [fx 0 cx; 0 fy cy; 0 0 1]
   cv::Mat dist_coef_; //!> Distortion coefficients [k1, k2, p1, p2]
   double baseline_; //!> Stereo baseline (in meters)
+  int img_w_; //!> Image width
+  int img_h_; //!> Image height
 
   ros::Publisher stereo_matching_pub_; //!> Publish an image with the stereo matchings
 
   ros::Publisher pose_pub_; //!> Publish vehicle pose
 
-  Frame p_frame_; //!> Previous frame
-  Frame c_frame_; //!> Current frame
-
-  tf::Transform acc_pose_; //!> Accumulated pose
+  tf::Transform camera_pose_; //!> Current camera pose
 
   // Topic sync
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,

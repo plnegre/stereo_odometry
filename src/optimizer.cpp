@@ -8,7 +8,7 @@ namespace odom
     dist_coef_ = new double[4];
   }
 
-  void Optimizer::setParameters(cv::Mat camera_matrix, cv::Mat dist_coef, double baseline)
+  void Optimizer::setParameters(const cv::Mat camera_matrix, const cv::Mat dist_coef, const double baseline)
   {
     camera_matrix_[0] = camera_matrix.at<double>(0,2);
     camera_matrix_[1] = camera_matrix.at<double>(1,2);

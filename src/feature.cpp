@@ -4,7 +4,7 @@ namespace odom
 {
   Feature::Feature() : max_disparity_(0.0) {}
 
-  void Feature::init(const cv::Mat camera_matrix, const cv::Mat dist_coef, const double baseline)
+  void Feature::setParameters(const cv::Mat camera_matrix, const cv::Mat dist_coef, const double baseline)
   {
     // Copy
     camera_matrix.copyTo(camera_matrix_);

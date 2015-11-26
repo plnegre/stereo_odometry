@@ -28,12 +28,12 @@ public:
    */
   Feature();
 
-  /** \brief Initialize feature class
+  /** \brief Set feature parameters
    * \param Camera matrix
    * \param Distortion coefficients
    * \param baseline
    */
-  void init(const cv::Mat camera_matrix, const cv::Mat dist_coef, const double baseline);
+  void setParameters(const cv::Mat camera_matrix, const cv::Mat dist_coef, const double baseline);
 
   /** \brief Undistort keypoints
    * \param Input distorted keypoints

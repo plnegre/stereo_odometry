@@ -15,7 +15,7 @@ namespace odom
     baseline_ = baseline;
 
     // Init feature tools
-    feat_->init(camera_matrix, dist_coef, baseline);
+    feat_->setParameters(camera_matrix, dist_coef, baseline);
 
     // Extract keypoints
     vector<cv::KeyPoint> l_kp, r_kp;
@@ -103,15 +103,10 @@ namespace odom
       cv::Point3d p(x, y, z);
 
       // Extract best descriptor
-      float resp = l_kp.response;
-      cv::Mat desc = l_desc_.row(matches_filtered_[i].queryIdx);
-      if (resp < r_kp.response)
-      {
-        resp = r_kp.response;
-        desc = r_desc_.row(matches_filtered_[i].trainIdx);
-      }
+      cv::Mat l_desc = l_desc_.row(matches_filtered_[i].queryIdx);
+      cv::Mat r_desc = r_desc_.row(matches_filtered_[i].trainIdx);
 
-      MapPoint* mp = new MapPoint(p, desc, resp);
+      MapPoint* mp = new MapPoint(p, l_kp, r_kp, l_desc, r_desc);
       mps.push_back(mp);
     }
 

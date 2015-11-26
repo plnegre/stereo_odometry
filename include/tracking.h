@@ -71,27 +71,29 @@ protected:
                     const sensor_msgs::ImageConstPtr& r_img_msg);
 
   /** \brief Search for matches between current and previous frame
-   * \param Matched keypoints on the current frame
-   * \param Matched world points on the previous frame
+   * \param Matched left keypoints on the previous frame
+   * \param Matched right keypoints on the previous frame
+   * \param Matched world points on the current frame
    */
-  void searchMatches(vector<cv::Point2d>& matched_kps, vector<cv::Point3d>& matched_wp);
+  void searchMatches(vector<cv::Point2d>& matched_prev_kp_l, vector<cv::Point2d>& matched_prev_kp_r, vector<cv::Point3d>& matched_c_wp);
 
   /** \brief Estimate the motion between two frames
    * @return Number of inliers
-   * \param Matched keypoints on the current frame
-   * \param Matched world points on the previous frame
+   * \param Matched left keypoints on the previous frame
+   * \param Matched right keypoints on the previous frame
+   * \param Matched world points on the current frame
    * \param Output motion
    */
-  int estimateMotion(vector<cv::Point2d> matched_kps, vector<cv::Point3d> matched_wp, tf::Transform& delta);
+  int estimateMotion(vector<cv::Point2d> matched_prev_kp_l, vector<cv::Point2d> matched_prev_kp_r, vector<cv::Point3d> matched_wp, tf::Transform& delta);
 
   /** \brief Compute projection error
    * @return error
+   * \param estimated transform
    * \param world point
    * \param corresponding camera point
-   * \param camera matrix
-   * \param distortion coefficients
+   * \param baseline (0 for left camera)
    */
-  double computeProjectionError(const cv::Point3d wp, const cv::Point2d cp, const cv::Mat camera_matrix, const cv::Mat dist_coef);
+  double computeProjectionError(const tf::Transform delta, const cv::Point3d wp, const cv::Point2d cp, double baseline = 0.0);
 
   /** \brief Publish the stereo matches for the current frame
    * \param current frame
@@ -123,8 +125,6 @@ private:
   Frame c_frame_; //!> Current frame
 
   tf::Transform acc_pose_; //!> Accumulated pose
-
-  int inliers_for_cam_update_; //!> The number of inliers that allows an update of the camera parameters
 
   // Topic sync
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,

@@ -2,11 +2,29 @@
 
 namespace odom
 {
-  Optimizer::Optimizer() {}
-
-  void Optimizer::poseOptimization(const vector<cv::Point2d> kps, const vector<cv::Point3d> wps, tf::Transform& pose, cv::Mat& camera_matrix, cv::Mat& dist_coef)
+  Optimizer::Optimizer()
   {
-    ROS_ASSERT(kps.size() == wps.size());
+    camera_matrix_ = new double[4];
+    dist_coef_ = new double[4];
+  }
+
+  void Optimizer::setParameters(cv::Mat camera_matrix, cv::Mat dist_coef, double baseline)
+  {
+    camera_matrix_[0] = camera_matrix.at<double>(0,2);
+    camera_matrix_[1] = camera_matrix.at<double>(1,2);
+    camera_matrix_[2] = camera_matrix.at<double>(0,0);
+    camera_matrix_[3] = baseline;
+
+    dist_coef_[0] = dist_coef.at<double>(0);
+    dist_coef_[1] = dist_coef.at<double>(1);
+    dist_coef_[2] = dist_coef.at<double>(2);
+    dist_coef_[3] = dist_coef.at<double>(3);
+  }
+
+  void Optimizer::poseOptimization(const vector<cv::Point2d> kps_l, const vector<cv::Point2d> kps_r, const vector<cv::Point3d> wps, tf::Transform& pose)
+  {
+    ROS_ASSERT(kps_l.size() == kps_r.size());
+    ROS_ASSERT(kps_l.size() == wps.size());
 
     // Ceres problem
     ceres::Problem problem;
@@ -17,26 +35,24 @@ namespace odom
     ceres::QuaternionToAngleAxis(quaternion, angle_axis);
 
     // Initial camera parameters
-    double* camera_params = new double[13];
+    double* camera_params = new double[6];
     camera_params[0] = angle_axis[0];
     camera_params[1] = angle_axis[1];
     camera_params[2] = angle_axis[2];
     camera_params[3] = pose.getOrigin().x();
     camera_params[4] = pose.getOrigin().y();
     camera_params[5] = pose.getOrigin().z();
-    camera_params[6] = camera_matrix.at<double>(0,0);
-    camera_params[7] = camera_matrix.at<double>(0,2);
-    camera_params[8] = camera_matrix.at<double>(1,2);
-    camera_params[9]  = dist_coef.at<double>(0);
-    camera_params[10] = dist_coef.at<double>(1);
-    camera_params[11] = dist_coef.at<double>(2);
-    camera_params[12] = dist_coef.at<double>(3);
 
     // Prepare the problem
-    for (uint i=0; i<kps.size(); i++) {
-
+    for (uint i=0; i<kps_l.size(); i++)
+    {
       ceres::CostFunction* cost_function =
-          SnavelyReprojectionError::Create(kps[i].x, kps[i].y);
+          SnavelyReprojectionError::Create(kps_l[i].x,
+                                           kps_l[i].y,
+                                           kps_r[i].x,
+                                           kps_r[i].y,
+                                           camera_matrix_,
+                                           dist_coef_);
 
       double* world_point = new double[3];
       world_point[0] = wps[i].x;
@@ -50,25 +66,17 @@ namespace odom
     }
 
     ceres::Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_SCHUR;
-    options.max_num_iterations = 1000;
+    options.linear_solver_type = ceres::SPARSE_SCHUR;
+    options.max_num_iterations = 500;
     options.minimizer_progress_to_stdout = false;
-    options.max_solver_time_in_seconds = 600;
+    options.max_solver_time_in_seconds = 5;
+    options.num_linear_solver_threads = 4;
+    options.num_threads = 4;
 
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
 
     ROS_INFO_STREAM("COST: " <<  summary.initial_cost << "  |  " << summary.final_cost);
-
-    // Save the optimized camera parameters
-    camera_matrix.at<double>(0,0) = camera_params[6];
-    camera_matrix.at<double>(1,1) = camera_params[6];
-    camera_matrix.at<double>(0,2) = camera_params[7];
-    camera_matrix.at<double>(1,2) = camera_params[8];
-    dist_coef.at<double>(0) = camera_params[9];
-    dist_coef.at<double>(1) = camera_params[10];
-    dist_coef.at<double>(2) = camera_params[11];
-    dist_coef.at<double>(3) = camera_params[12];
 
     // Convert angle axis to quaternion
     double rot[4];

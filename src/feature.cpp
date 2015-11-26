@@ -94,7 +94,7 @@ namespace odom
   int Feature::stereoMatchingFilter(const vector<cv::KeyPoint> ukp_1, const vector<cv::KeyPoint> ukp_2, const vector<cv::DMatch> matches, vector<cv::DMatch>& matches_filtered)
   {
     // TODO: Change the epipolar threshold depending on the distortion coefficients
-    const float epi_thresh = 10.0;
+    const float epi_thresh = 1.5;
 
     for (size_t i=0; i<matches.size(); ++i)
     {

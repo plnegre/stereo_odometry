@@ -38,22 +38,22 @@ public:
   /** \brief Get the left stereo matched keypoints
    * @return the vector of left matched keypoints
    */
-  vector<cv::KeyPoint> getLeftMatchedKp();
+  vector<cv::KeyPoint> getLeftKp();
 
   /** \brief Get the right stereo matched keypoints
    * @return the vector of right matched keypoints
    */
-  vector<cv::KeyPoint> getRightMatchedKp();
+  vector<cv::KeyPoint> getRightKp();
 
   /** \brief Get the left stereo matched descriptors
    * @return the matched descriptors matrix
    */
-  cv::Mat getLeftMatchedDesc();
+  cv::Mat getLeftDesc();
 
   /** \brief Get the right stereo matched descriptors
    * @return the matched descriptors matrix
    */
-  cv::Mat getRightMatchedDesc();
+  cv::Mat getRightDesc();
 
   /** \brief Get the matched map points
    * @return the map points computed from the stereo matches

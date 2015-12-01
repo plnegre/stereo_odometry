@@ -43,7 +43,7 @@ namespace odom
     feat_->stereoMatchingFilter(l_kp_, r_kp_, matches, matches_filtered_);
   }
 
-  vector<cv::KeyPoint> Frame::getLeftMatchedKp()
+  vector<cv::KeyPoint> Frame::getLeftKp()
   {
     vector<cv::KeyPoint> kps;
     for (uint i=0; i<matches_filtered_.size(); i++)
@@ -52,7 +52,7 @@ namespace odom
     return kps;
   }
 
-  vector<cv::KeyPoint> Frame::getRightMatchedKp()
+  vector<cv::KeyPoint> Frame::getRightKp()
   {
     vector<cv::KeyPoint> kps;
     for (uint i=0; i<matches_filtered_.size(); i++)
@@ -61,7 +61,7 @@ namespace odom
     return kps;
   }
 
-  cv::Mat Frame::getLeftMatchedDesc()
+  cv::Mat Frame::getLeftDesc()
   {
     cv::Mat desc;
     for (uint i=0; i<matches_filtered_.size(); i++)
@@ -70,7 +70,7 @@ namespace odom
     return desc;
   }
 
-  cv::Mat Frame::getRightMatchedDesc()
+  cv::Mat Frame::getRightDesc()
   {
     cv::Mat desc;
     for (uint i=0; i<matches_filtered_.size(); i++)

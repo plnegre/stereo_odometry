@@ -21,10 +21,16 @@ namespace odom
     dist_coef_[3] = dist_coef.at<double>(3);
   }
 
-  void Optimizer::poseOptimization(const vector<cv::Point2d> kps_l, const vector<cv::Point2d> kps_r, const vector<cv::Point3d> wps, tf::Transform& pose)
+  void Optimizer::poseOptimization(const vector<cv::KeyPoint> kps_l,
+                                   const vector<cv::KeyPoint> kps_r,
+                                   const vector<cv::Point3d> wps,
+                                   tf::Transform& pose,
+                                   const vector<int> mask)
   {
     ROS_ASSERT(kps_l.size() == kps_r.size());
     ROS_ASSERT(kps_l.size() == wps.size());
+    if (mask.size() > 0)
+      ROS_ASSERT(mask.size() == kps_l.size());
 
     // Ceres problem
     ceres::Problem problem;
@@ -46,11 +52,14 @@ namespace odom
     // Prepare the problem
     for (uint i=0; i<kps_l.size(); i++)
     {
+      if (mask.size()> 0)
+        if (mask[i]==0) continue;
+
       ceres::CostFunction* cost_function =
-          SnavelyReprojectionError::Create(kps_l[i].x,
-                                           kps_l[i].y,
-                                           kps_r[i].x,
-                                           kps_r[i].y,
+          SnavelyReprojectionError::Create(kps_l[i].pt.x,
+                                           kps_l[i].pt.y,
+                                           kps_r[i].pt.x,
+                                           kps_r[i].pt.y,
                                            camera_matrix_,
                                            dist_coef_);
 
@@ -69,7 +78,7 @@ namespace odom
     options.linear_solver_type = ceres::SPARSE_SCHUR;
     options.max_num_iterations = 500;
     options.minimizer_progress_to_stdout = false;
-    options.max_solver_time_in_seconds = 5;
+    options.max_solver_time_in_seconds = 0.020; // TODO: update with the frame rate
     options.num_linear_solver_threads = 4;
     options.num_threads = 4;
 

@@ -60,6 +60,25 @@ public:
    */
   inline cv::Mat getRightDesc() const {return r_desc_;}
 
+  /** \brief Return the number of times this point have been seen
+   * @return the number of times this point have been seen
+   */
+  inline int getNumVisible() const {return n_visible_;}
+
+  /** \brief Increase the number of times this point have been seen
+   */
+  inline void increaseVisible() {n_visible_++;}
+
+  /** \brief Set the left descriptor
+   * \param the left descriptor
+   */
+  inline void setLeftDesc(cv::Mat l_desc) {l_desc_ = l_desc;}
+
+  /** \brief Set the right descriptor
+   * \param the right descriptor
+   */
+  inline void setRightDesc(cv::Mat r_desc) {r_desc_ = r_desc;}
+
 private:
 
   cv::Point3d world_pos_; //!> World position

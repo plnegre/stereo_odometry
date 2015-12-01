@@ -73,8 +73,69 @@ protected:
   /** \brief Search for matches between visible map points and current frame points
    * \param Set of visible map points
    * \param Current frame
+   * \param Output vector containing the indices of the matched world points
+   * \param Output vector containing the indices of the matched keypoints
    */
-  void searchMatches(vector<MapPoint*> mps, Frame frame);
+  void searchMatches(const vector<MapPoint*> mps,
+                     Frame frame,
+                     vector<int>& matched_map_wps,
+                     vector<int>& matched_frame_kps);
+
+  /** \brief Builds the matched vectors to estimate the pose
+   * \param Set of map points
+   * \param Current frame
+   * \param Indices of the matched world points
+   * \param Indices of the matched keypoints
+   * \param Output vector containing the matched world points
+   * \param Output vector containing the left matched keypoints
+   * \param Output vector containing the right matched keypoints
+   */
+  void buildMatchedVectors(const vector<MapPoint*> mps,
+                           Frame frame,
+                           const vector<int> matched_map_wps,
+                           const vector<int> matched_frame_kps,
+                           vector<cv::Point3d>& map_wps,
+                           vector<cv::KeyPoint>& frame_l_kps,
+                           vector<cv::KeyPoint>& frame_r_kps);
+
+  /** \brief Estimate the camera position
+   * \param Set of map points
+   * \param Current frame
+   * \param Indices of the matched world points
+   * \param Indices of the matched keypoints
+   * \param Output estimated camera pose
+   * \param Vector of inliers
+   */
+  void estimatePose(const vector<MapPoint*> mps,
+                   Frame frame,
+                   vector<int> matched_map_wps,
+                   vector<int> matched_frame_kps,
+                   tf::Transform& pose,
+                   vector<int>& inliers);
+
+  /** \brief Compute the projection error
+   * \param Camera pose
+   * \param World point
+   * \param Camera point
+   * \param Baseline (if camera point is in the right frame)
+   */
+  double computeProjectionError(const tf::Transform pose,
+                                const cv::Point3d wp,
+                                const cv::Point2d cp,
+                                const double baseline=0.0);
+
+  /** \brief Update the map points
+   * \param Set of map points
+   * \param Current frame
+   * \param Indices of the matched map points
+   * \param Indices of the matched keypoints
+   * \param Vector of inliers
+   */
+  void updateMap(const vector<MapPoint*> mps,
+                 Frame frame,
+                 const vector<int> matched_map_wps,
+                 const vector<int> matched_frame_kps,
+                 const vector<int> inliers);
 
   /** \brief Publish the stereo matches for the current frame
    * \param current frame

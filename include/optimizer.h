@@ -29,12 +29,17 @@ public:
   void setParameters(const cv::Mat camera_matrix, const cv::Mat dist_coef, const double baseline);
 
   /** \brief Pose optimization
-   * \param keypoints of frame A
-   * \param world points of frame B
-   * \param Camera matrix
-   * \param Distortion coefficients
+   * \param Left keypoints of curret frame
+   * \param Right keypoints of curret frame
+   * \param World points
+   * \param Output camera pose
+   * \param Mask
    */
-  void poseOptimization(const vector<cv::Point2d> kps_l, const vector<cv::Point2d> kps_r, const vector<cv::Point3d> wps, tf::Transform& pose);
+  void poseOptimization(const vector<cv::KeyPoint> kps_l,
+                        const vector<cv::KeyPoint> kps_r,
+                        const vector<cv::Point3d> wps,
+                        tf::Transform& pose,
+                        const vector<int> mask);
 
   struct SnavelyReprojectionError {
     SnavelyReprojectionError(double l_observed_x, double l_observed_y, double r_observed_x, double r_observed_y, double* camera_matrix, double* dist_coef)
@@ -90,7 +95,6 @@ public:
       residuals[2] = r_predicted_x - T(r_observed_x_);
       residuals[3] = r_predicted_y - T(r_observed_y_);
 
-      // TODO: add the stereo epipolar constraint as a residual
       return true;
     }
 

@@ -45,16 +45,35 @@ public:
    * @return Map points
    * \param Current camera pose in world coordinates
    */
-  vector<MapPoint*> getMapPointsInFrustum(const tf::Transform camera_pose);
+  vector<MapPoint*> getMapPointsInFrustum(const tf::Transform camera_pose, const double uncert=0.0);
 
   /** \brief Get the point properties of a specific set of map points
    * \param Set of map points
+   * \param Output vector of point world positions
    * \param Output vector of left keypoints
    * \param Output vector of right keypoints
    * \param Output vector of left descriptors
    * \param Output vector of right descriptors
    */
-  void getPointsProperties(const vector<MapPoint*> mps, vector<cv::Point3d>& wps, vector<cv::KeyPoint>& l_kps, vector<cv::KeyPoint>& r_kps, cv::Mat& l_desc, cv::Mat& r_desc);
+  void getPointsProperties(const vector<MapPoint*> mps,
+                           vector<cv::Point3d>& wps,
+                           vector<cv::KeyPoint>& l_kps,
+                           vector<cv::KeyPoint>& r_kps,
+                           cv::Mat& l_desc,
+                           cv::Mat& r_desc);
+
+  /** \brief Get the point world positions of a specific set of map points
+   * \param Set of map points
+   * \param Output vector of point world positions
+   */
+  void getPointsPositions(const vector<MapPoint*> mps, vector<cv::Point3d>& wps);
+
+  /** \brief Get the point descriptors of a specific set of map points
+   * \param Set of map points
+   * \param Output vector of left descriptors
+   * \param Output vector of right descriptors
+   */
+  void getPointsDesc(const vector<MapPoint*> mps, cv::Mat& l_desc, cv::Mat& r_desc);
 
 protected:
 

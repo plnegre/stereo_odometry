@@ -23,7 +23,7 @@ namespace odom
       addMapPoint(mps[i]);
   }
 
-  vector<MapPoint*> Map::getMapPointsInFrustum(const tf::Transform camera_pose)
+  vector<MapPoint*> Map::getMapPointsInFrustum(const tf::Transform camera_pose, const double uncert)
   {
     vector<MapPoint*> mps;
 
@@ -31,7 +31,7 @@ namespace odom
     {
       cv::Point2d cp = project3dToPixel((*sit)->getWorldPos(), camera_pose);
 
-      if ((cp.x >= 0 && cp.x < img_w_) && (cp.y >= 0 && cp.y < img_h_))
+      if ((cp.x >= -uncert && cp.x < img_w_+uncert) && (cp.y >= -uncert && cp.y < img_h_+uncert))
         mps.push_back(*sit);
     }
 
@@ -83,6 +83,28 @@ namespace odom
       wps.push_back(mp->getWorldPos());
       l_kps.push_back(mp->getLeftKp());
       r_kps.push_back(mp->getRightKp());
+      l_desc.push_back(mp->getLeftDesc());
+      r_desc.push_back(mp->getRightDesc());
+    }
+  }
+
+  void Map::getPointsPositions(const vector<MapPoint*> mps, vector<cv::Point3d>& wps)
+  {
+    wps.clear();
+    for (uint i=0; i<mps.size(); i++)
+    {
+      MapPoint* mp = mps[i];
+      wps.push_back(mp->getWorldPos());
+    }
+  }
+
+  void Map::getPointsDesc(const vector<MapPoint*> mps, cv::Mat& l_desc, cv::Mat& r_desc)
+  {
+    l_desc.release();
+    r_desc.release();
+    for (uint i=0; i<mps.size(); i++)
+    {
+      MapPoint* mp = mps[i];
       l_desc.push_back(mp->getLeftDesc());
       r_desc.push_back(mp->getRightDesc());
     }

@@ -9,8 +9,8 @@
 #include <ros/ros.h>
 #include <tf/transform_datatypes.h>
 
+#include "featools.h"
 #include "feature.h"
-#include "mappoint.h"
 
 using namespace std;
 
@@ -27,63 +27,45 @@ public:
   Frame();
 
   /** \brief Class constructor
+   * \param Featools object
    * \param Left stereo image
    * \param Right stereo image
-   * \param Camera matrix
-   * \param Distortion coefficients
-   * \param baseline
+   * \param Enter the first feature id and returns the last
    */
-  Frame(const cv::Mat l_img, const cv::Mat r_img, const cv::Mat camera_matrix, const cv::Mat dist_coef, const double baseline);
-
-  /** \brief Get the left stereo matched keypoints
-   * @return the vector of left matched keypoints
-   */
-  vector<cv::KeyPoint> getLeftKp();
-
-  /** \brief Get the right stereo matched keypoints
-   * @return the vector of right matched keypoints
-   */
-  vector<cv::KeyPoint> getRightKp();
-
-  /** \brief Get the left stereo matched descriptors
-   * @return the matched descriptors matrix
-   */
-  cv::Mat getLeftDesc();
-
-  /** \brief Get the right stereo matched descriptors
-   * @return the matched descriptors matrix
-   */
-  cv::Mat getRightDesc();
-
-  /** \brief Get the matched map points
-   * @return the map points computed from the stereo matches
-   */
-  vector<MapPoint*> getMapPoints();
+  Frame(Featools* feat, const cv::Mat l_img, const cv::Mat r_img, const uint frame_uid, uint& feat_id);
 
   /** \brief Draw stereo matches
    * @return the composed image with the matchings
    */
-  cv::Mat drawMatches();
+  cv::Mat drawStereoMatches();
 
+  /** \brief Get the matched features
+   * @return the features computed from the stereo matches
+   */
+  inline vector<Feature*> getFeatures() const {return features_;};
+
+protected:
+
+  /** \brief Computes world point
+   * @return the world point
+   * \param left keypoint
+   * \param right keypoint
+   */
+  cv::Point3d computeWorldPoint(cv::KeyPoint l_kp, cv::KeyPoint r_kp);
 
 private:
 
-  Feature* feat_; //!> Features object
+  Featools* featools_; //!> Features object
 
   cv::Mat l_img_; //!> Left image
   cv::Mat r_img_; //!> Right image
 
-  vector<cv::KeyPoint> l_kp_; //!> Left keypoints.
-  vector<cv::KeyPoint> r_kp_; //!> Right keypoints.
+  vector<cv::KeyPoint> l_ukp_; //!> Left kps
+  vector<cv::KeyPoint> r_ukp_; //!> Right kps
 
-  cv::Mat l_desc_; //!> Left descriptors.
-  cv::Mat r_desc_; //!> Right descriptors.
+  vector<cv::DMatch> matches_filtered_; //!> Matches filtered
 
-  vector<cv::DMatch> matches_filtered_; //!> Stereo filtered matches
-
-  cv::Mat camera_matrix_; //!> Camera matrix [fx 0 cx; 0 fy cy; 0 0 1]
-  cv::Mat dist_coef_; //!> Distortion coefficients [k1, k2, p1, p2]
-  double baseline_; //!> Stereo baseline (in meters)
+  vector<Feature*> features_; //!> Frame features vector
 
 };
 

@@ -2,20 +2,13 @@
 
 namespace odom
 {
+  Frame::Frame() {}
 
-  Frame::Frame() : feat_(new Feature) {}
-
-  Frame::Frame(const cv::Mat l_img, const cv::Mat r_img, const cv::Mat camera_matrix, const cv::Mat dist_coef, const double baseline) : feat_(new Feature)
+  Frame::Frame(Featools* feat, const cv::Mat l_img, const cv::Mat r_img, const uint frame_uid, uint& feat_uid) : featools_(feat)
   {
     // Copy
     l_img.copyTo(l_img_);
     r_img.copyTo(r_img_);
-    camera_matrix.copyTo(camera_matrix_);
-    dist_coef.copyTo(dist_coef_);
-    baseline_ = baseline;
-
-    // Init feature tools
-    feat_->setParameters(camera_matrix, dist_coef, baseline);
 
     // Extract keypoints
     vector<cv::KeyPoint> l_kp, r_kp;
@@ -24,96 +17,60 @@ namespace odom
     orb(r_img_, cv::noArray(), r_kp, cv::noArray(), false);
 
     // Extract descriptors
+    cv::Mat l_desc, r_desc;
     cv::Ptr<cv::DescriptorExtractor> cv_extractor;
     cv_extractor = cv::DescriptorExtractor::create("ORB");
-    cv_extractor->compute(l_img_, l_kp, l_desc_);
-    cv_extractor->compute(r_img_, r_kp, r_desc_);
+    cv_extractor->compute(l_img_, l_kp, l_desc);
+    cv_extractor->compute(r_img_, r_kp, r_desc);
 
     if (l_kp.empty() || r_kp.empty()) return;
 
     // Undistort
-    feat_->undistortKeyPoints(l_kp, l_kp_);
-    feat_->undistortKeyPoints(r_kp, r_kp_);
+    featools_->undistortKeyPoints(l_kp, l_ukp_);
+    featools_->undistortKeyPoints(r_kp, r_ukp_);
 
     // Left/right matching
     vector<cv::DMatch> matches;
-    feat_->ratioMatching(l_desc_, r_desc_, 0.8, matches);
+    featools_->ratioMatching(l_desc, r_desc, 0.8, matches);
 
     // Filter
-    feat_->stereoMatchingFilter(l_kp_, r_kp_, matches, matches_filtered_);
-  }
+    featools_->stereoMatchingFilter(l_ukp_, r_ukp_, matches, matches_filtered_);
 
-  vector<cv::KeyPoint> Frame::getLeftKp()
-  {
-    vector<cv::KeyPoint> kps;
-    for (uint i=0; i<matches_filtered_.size(); i++)
-      kps.push_back(l_kp_[matches_filtered_[i].queryIdx]);
-
-    return kps;
-  }
-
-  vector<cv::KeyPoint> Frame::getRightKp()
-  {
-    vector<cv::KeyPoint> kps;
-    for (uint i=0; i<matches_filtered_.size(); i++)
-      kps.push_back(r_kp_[matches_filtered_[i].trainIdx]);
-
-    return kps;
-  }
-
-  cv::Mat Frame::getLeftDesc()
-  {
-    cv::Mat desc;
-    for (uint i=0; i<matches_filtered_.size(); i++)
-      desc.push_back(l_desc_.row(matches_filtered_[i].queryIdx));
-
-    return desc;
-  }
-
-  cv::Mat Frame::getRightDesc()
-  {
-    cv::Mat desc;
-    for (uint i=0; i<matches_filtered_.size(); i++)
-      desc.push_back(r_desc_.row(matches_filtered_[i].trainIdx));
-
-    return desc;
-  }
-
-  vector<MapPoint*> Frame::getMapPoints()
-  {
-    ROS_ASSERT(camera_matrix_.at<double>(0,0) == camera_matrix_.at<double>(1,1));
-
-    // Camera parameters
-    const double cx = camera_matrix_.at<double>(0,2);
-    const double cy = camera_matrix_.at<double>(1,2);
-    const double f = camera_matrix_.at<double>(0,0);
-
-    vector<MapPoint*> mps;
+    // Fill the features vector
     for (uint i=0; i<matches_filtered_.size(); i++)
     {
-      cv::KeyPoint l_kp = l_kp_[matches_filtered_[i].queryIdx];
-      cv::KeyPoint r_kp = r_kp_[matches_filtered_[i].trainIdx];
+      cv::KeyPoint l_kp_1     = l_ukp_[matches_filtered_[i].queryIdx];
+      cv::KeyPoint r_kp_1     = r_ukp_[matches_filtered_[i].trainIdx];
+      cv::Mat l_desc_1        = l_desc.row(matches_filtered_[i].queryIdx);
+      cv::Mat r_desc_1        = r_desc.row(matches_filtered_[i].trainIdx);
+      cv::Point3d world_point = computeWorldPoint(l_kp_1, r_kp_1);
 
-      // Compute 3D
-      double disparity = l_kp.pt.x - r_kp.pt.x;
-      double wa = (1.0 / baseline_) * disparity;
-      double x = (l_kp.pt.x - cx) * (1.0 / wa);
-      double y = (l_kp.pt.y - cy) * (1.0 / wa);
-      double z = f * (1.0 / wa);
-      cv::Point3d p(x, y, z);
-
-      // Extract best descriptor
-      cv::Mat l_desc = l_desc_.row(matches_filtered_[i].queryIdx);
-      cv::Mat r_desc = r_desc_.row(matches_filtered_[i].trainIdx);
-
-      MapPoint* mp = new MapPoint(p, l_kp, r_kp, l_desc, r_desc);
-      mps.push_back(mp);
+      Feature* f = new Feature(feat_uid, frame_uid, world_point, l_kp_1, r_kp_1, l_desc_1, r_desc_1);
+      features_.push_back(f);
+      feat_uid++;
     }
-
-    return mps;
   }
 
-  cv::Mat Frame::drawMatches()
+  cv::Point3d Frame::computeWorldPoint(cv::KeyPoint l_kp, cv::KeyPoint r_kp)
+  {
+    // Camera parameters
+    double baseline = featools_->getBaseline();
+    cv::Mat camera_matrix = featools_->getCameraMatrix();
+    ROS_ASSERT(camera_matrix.at<double>(0,0) == camera_matrix.at<double>(1,1));
+    const double cx = camera_matrix.at<double>(0,2);
+    const double cy = camera_matrix.at<double>(1,2);
+    const double f  = camera_matrix.at<double>(0,0);
+
+    double disparity = l_kp.pt.x - r_kp.pt.x;
+    double wa = (1.0 / baseline) * disparity;
+    double x = (l_kp.pt.x - cx) * (1.0 / wa);
+    double y = (l_kp.pt.y - cy) * (1.0 / wa);
+    double z = f * (1.0 / wa);
+    cv::Point3d p(x, y, z);
+    return p;
+  }
+
+  cv::Mat Frame::drawStereoMatches()
   {
     cv::Mat img_matches;
 
@@ -128,8 +85,8 @@ namespace odom
       vector<cv::KeyPoint> l_kp, r_kp;
       for (uint i=0; i<matches_filtered_.size(); i++)
       {
-        l_kp.push_back(l_kp_[matches_filtered_[i].queryIdx]);
-        r_kp.push_back(r_kp_[matches_filtered_[i].trainIdx]);
+        l_kp.push_back(l_ukp_[matches_filtered_[i].queryIdx]);
+        r_kp.push_back(r_ukp_[matches_filtered_[i].trainIdx]);
 
         matches_filtered_[i].queryIdx = i;
         matches_filtered_[i].trainIdx = i;
@@ -139,8 +96,6 @@ namespace odom
       cv::drawMatches(l_img_, l_kp, r_img_, r_kp, matches_filtered_, img_matches);
       return img_matches;
     }
-
-
   }
 
 } //namespace odom

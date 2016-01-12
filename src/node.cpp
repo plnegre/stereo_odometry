@@ -2,14 +2,14 @@
 
 #include <boost/thread.hpp>
 
-#include "tracking.h"
+#include "tracker.h"
 
 /** \brief Read the node parameters
   */
-void readParameters(odom::Tracking::Params &tracking_params)
+void readParameters(odom::Tracker::Params &tracker_params)
 {
   ros::NodeHandle nhp("~");
-  nhp.param("camera_name", tracking_params.camera_name, string(""));
+  nhp.param("camera_name", tracker_params.camera_name, string(""));
 }
 
 /** \brief Main entry point
@@ -21,17 +21,17 @@ int main(int argc, char **argv)
   ros::start();
 
   // Objects
-  odom::Tracking tracker;
+  odom::Tracker tracker;
 
   // Read parameters
-  odom::Tracking::Params tracking_params;
-  readParameters(tracking_params);
+  odom::Tracker::Params tracker_params;
+  readParameters(tracker_params);
 
   // Set the parameters for every object
-  tracker.setParams(tracking_params);
+  tracker.setParams(tracker_params);
 
   // Launch threads
-  boost::thread trackingThread(&odom::Tracking::run, &tracker);
+  boost::thread trackingThread(&odom::Tracker::run, &tracker);
 
   // ROS spin
   ros::Rate r(10);

@@ -22,6 +22,14 @@ class Frame
 
 public:
 
+  struct {
+    bool operator()(cv::KeyPoint a, cv::KeyPoint b)
+    {
+      return a.response > b.response;
+    }
+  } sortByBigResponse;
+
+
   /** \brief Empty class constructor
    */
   Frame();
@@ -53,6 +61,10 @@ protected:
    */
   cv::Point3d computeWorldPoint(cv::KeyPoint l_kp, cv::KeyPoint r_kp);
 
+  vector<cv::DMatch> bucketFeatures(vector<cv::KeyPoint> l_kp,
+                                    vector<cv::KeyPoint> r_kp,
+                                    vector<cv::DMatch> matches);
+
 private:
 
   Featools* featools_; //!> Features object
@@ -63,7 +75,7 @@ private:
   vector<cv::KeyPoint> l_ukp_; //!> Left kps
   vector<cv::KeyPoint> r_ukp_; //!> Right kps
 
-  vector<cv::DMatch> matches_filtered_; //!> Matches filtered
+  vector<cv::DMatch> matches_bucketed_; //!> Matches filtered and bucketed
 
   vector<Feature*> features_; //!> Frame features vector
 

@@ -250,7 +250,7 @@ namespace odom
     vector<cv::Mat> P; // 3x4 projection matrix
     vector<int> inliers;
     bool ret;
-    for(uint i=0; i<100; i++) {
+    for(uint i=0; i<200; i++) {
       ret = Solve5PointEssential(c_points, p_points, c_p_matches.size(), E, P, inliers);
     }
 
@@ -262,6 +262,12 @@ namespace odom
 
       cv::Mat R, t, mask;
       recoverPose(E_good, c_points_2f, p_points_2f, R, t, mask);
+      tf::Matrix3x3 rot_mat(R.at<double>(0,0),R.at<double>(0,1),R.at<double>(0,2),
+                            R.at<double>(1,0),R.at<double>(1,1),R.at<double>(1,2),
+                            R.at<double>(2,0),R.at<double>(2,1),R.at<double>(2,2));
+      tf::Quaternion q;
+      rot_mat.getRotation(q);
+      ROS_INFO_STREAM("INLIERS: " << inliers[max_inliers_idx] << "/" << c_p_matches.size()); // << q.x() << ", " << q.y() << ", " << q.z() << ", " << q.w() );
 
     }
     else

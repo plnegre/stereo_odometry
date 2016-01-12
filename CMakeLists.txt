@@ -28,21 +28,23 @@ find_package(Ceres REQUIRED)
 catkin_package()
 
 include_directories(include
+  src/external/5point
   ${catkin_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
-  ${CERES_INCLUDE_DIRS})
+  ${CERES_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS})
 
 add_executable(stereo_odometry
   src/node.cpp
+  src/featools.cpp
   src/feature.cpp
-  src/mappoint.cpp
-  src/map.cpp
   src/frame.cpp
-  src/tracking.cpp
-  src/optimizer.cpp)
+  src/tracker.cpp
+  src/optimizer.cpp
+  src/external/5point/5point.cpp
+  src/external/5point/Rpoly.cpp)
 target_link_libraries(stereo_odometry
   ${eigen_LIBRARIES}
-  ${OpenCV_LIBRARIES}
   ${CERES_LIBRARIES}
+  ${OpenCV_LIBRARIES}
   ${catkin_LIBRARIES})

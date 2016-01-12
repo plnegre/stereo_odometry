@@ -30,19 +30,22 @@ namespace odom
     featools_->undistortKeyPoints(r_kp, r_ukp_);
 
     // Left/right matching
-    vector<cv::DMatch> matches;
+    vector<cv::DMatch> matches, matches_filtered;
     featools_->ratioMatching(l_desc, r_desc, 0.8, matches);
 
     // Filter
-    featools_->stereoMatchingFilter(l_ukp_, r_ukp_, matches, matches_filtered_);
+    featools_->stereoMatchingFilter(l_ukp_, r_ukp_, matches, matches_filtered);
+
+    // Bucketing
+    matches_bucketed_ = bucketFeatures(l_ukp_, r_ukp_, matches_filtered);
 
     // Fill the features vector
-    for (uint i=0; i<matches_filtered_.size(); i++)
+    for (uint i=0; i<matches_bucketed_.size(); i++)
     {
-      cv::KeyPoint l_kp_1     = l_ukp_[matches_filtered_[i].queryIdx];
-      cv::KeyPoint r_kp_1     = r_ukp_[matches_filtered_[i].trainIdx];
-      cv::Mat l_desc_1        = l_desc.row(matches_filtered_[i].queryIdx);
-      cv::Mat r_desc_1        = r_desc.row(matches_filtered_[i].trainIdx);
+      cv::KeyPoint l_kp_1     = l_ukp_[matches_bucketed_[i].queryIdx];
+      cv::KeyPoint r_kp_1     = r_ukp_[matches_bucketed_[i].trainIdx];
+      cv::Mat l_desc_1        = l_desc.row(matches_bucketed_[i].queryIdx);
+      cv::Mat r_desc_1        = r_desc.row(matches_bucketed_[i].trainIdx);
       cv::Point3d world_point = computeWorldPoint(l_kp_1, r_kp_1);
 
       Feature* f = new Feature(feat_uid, frame_uid, world_point, l_kp_1, r_kp_1, l_desc_1, r_desc_1);
@@ -70,11 +73,75 @@ namespace odom
     return p;
   }
 
+  vector<cv::DMatch> Frame::bucketFeatures(vector<cv::KeyPoint> l_kp,
+                                           vector<cv::KeyPoint> r_kp,
+                                           vector<cv::DMatch> matches)
+  {
+    const int b_width  = 40;
+    const int b_height = 30;
+    const int max_feat = 4;
+
+    // Find max values
+    float x_max = 0;
+    float y_max = 0;
+    for (vector<cv::DMatch>::iterator it = matches.begin(); it!=matches.end(); it++)
+    {
+      if (l_kp[it->queryIdx].pt.x > x_max) x_max = l_kp[it->queryIdx].pt.x;
+      if (l_kp[it->queryIdx].pt.y > y_max) y_max = l_kp[it->queryIdx].pt.y;
+    }
+
+    // Allocate number of buckets needed
+    int bucket_cols = (int)floor(x_max/b_width) + 1;
+    int bucket_rows = (int)floor(y_max/b_height) + 1;
+    vector<cv::KeyPoint> *buckets = new vector<cv::KeyPoint>[bucket_cols*bucket_rows];
+
+    // Assign keypoints to their buckets
+    for (vector<cv::DMatch>::iterator it=matches.begin(); it!=matches.end(); it++)
+    {
+      int u = (int)floor(l_kp[it->queryIdx].pt.x/b_width);
+      int v = (int)floor(l_kp[it->queryIdx].pt.y/b_height);
+
+      // Trick to sort by response: accumulate the left and right response
+      l_kp[it->queryIdx].response = l_kp[it->queryIdx].response + r_kp[it->trainIdx].response;
+      buckets[v*bucket_cols+u].push_back(l_kp[it->queryIdx]);
+    }
+
+    // Refill matches from buckets
+    vector<cv::DMatch> output;
+    for (int i=0; i<bucket_cols*bucket_rows; i++)
+    {
+      // Sort descriptors matched by distance
+      sort(buckets[i].begin(), buckets[i].end(), sortByBigResponse);
+
+      // Add up to max_features features from this bucket to output
+      int k=0;
+      for (vector<cv::KeyPoint>::iterator it=buckets[i].begin(); it!=buckets[i].end(); it++)
+      {
+        // Search this feature into the matches vector
+        cv::DMatch found_match;
+        for (vector<cv::DMatch>::iterator it_m=matches.begin(); it_m!=matches.end(); it_m++)
+        {
+          if (fabs(it->pt.x - l_kp[it_m->queryIdx].pt.x) < 1.0e-3 and  fabs(it->pt.y - l_kp[it_m->queryIdx].pt.y) < 1.0e-3)
+          {
+            found_match = *it_m;
+            break;
+          }
+        }
+
+        output.push_back(found_match);
+        k++;
+        if (k >= max_feat)
+          break;
+      }
+    }
+    return output;
+  }
+
   cv::Mat Frame::drawStereoMatches()
   {
     cv::Mat img_matches;
 
-    if (matches_filtered_.size() == 0)
+    if (matches_bucketed_.size() == 0)
     {
       cv::hconcat(l_img_, r_img_, img_matches);
       return img_matches;
@@ -83,17 +150,17 @@ namespace odom
     {
       // Draw matches only
       vector<cv::KeyPoint> l_kp, r_kp;
-      for (uint i=0; i<matches_filtered_.size(); i++)
+      for (uint i=0; i<matches_bucketed_.size(); i++)
       {
-        l_kp.push_back(l_ukp_[matches_filtered_[i].queryIdx]);
-        r_kp.push_back(r_ukp_[matches_filtered_[i].trainIdx]);
+        l_kp.push_back(l_ukp_[matches_bucketed_[i].queryIdx]);
+        r_kp.push_back(r_ukp_[matches_bucketed_[i].trainIdx]);
 
-        matches_filtered_[i].queryIdx = i;
-        matches_filtered_[i].trainIdx = i;
+        matches_bucketed_[i].queryIdx = i;
+        matches_bucketed_[i].trainIdx = i;
       }
 
       // Draw
-      cv::drawMatches(l_img_, l_kp, r_img_, r_kp, matches_filtered_, img_matches);
+      cv::drawMatches(l_img_, l_kp, r_img_, r_kp, matches_bucketed_, img_matches);
       return img_matches;
     }
   }
